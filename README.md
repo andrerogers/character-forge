@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CharacterForge
 
-## Getting Started
+A Next.js app for generating richly detailed fictional characters. Describe a concept, pick an art style, and CharacterForge uses **Claude** to write the character profile and **Gemini** to paint the portrait.
 
-First, run the development server:
+## Features
+
+- **3-step creation wizard** — concept & style → details (name, age, moods, colour palette, artist inspiration) → generated result
+- **AI profile generation** — Claude (Sonnet 4.6) writes name, description, tagline, backstory, personality traits, and a matching hex colour palette
+- **AI portrait generation** — Gemini (2.5 Flash Image) renders the portrait using the profile and your chosen art style
+- **Artist inspiration** — optionally name real-world artists (e.g. Todd McFarlane, Moebius) to steer Gemini's visual style
+- **Character gallery** — browse and revisit all saved characters
+- **Art styles** — Comic, Manga, Sketch, Freeform
+- **Dark / light theme**
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| AI — profiles | Anthropic Claude claude-sonnet-4-6 |
+| AI — images | Google Gemini 2.5 Flash Image |
+| Database | PostgreSQL 16 via Prisma 6 |
+| Image storage | Local filesystem (`/images`) |
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- Docker (for the local Postgres instance)
+- An Anthropic API key
+- A Google Gemini API key
+
+### Setup
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Create environment file
+cp .env.example .env.local
+# then fill in ANTHROPIC_API_KEY, GEMINI_API_KEY, DATABASE_URL
+
+# 3. Start the database
+docker compose up -d
+
+# 4. Run migrations
+npx prisma migrate dev
+
+# 5. Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
+| `GEMINI_API_KEY` | Google API key for Gemini |
+| `DATABASE_URL` | Postgres connection string |
 
-## Learn More
+The Docker Compose database uses:
+```
+DATABASE_URL=postgresql://character_forge:character_forge@localhost:5432/character_forge
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/                        # Next.js App Router
+  page.tsx                  # character gallery
+  characters/new/page.tsx   # creation wizard
+  api/generate/             # profile + image generation routes
+  api/characters/           # CRUD routes
+components/
+  creator/                  # step-by-step wizard components
+  gallery/                  # gallery grid
+  ui/                       # shadcn/ui primitives
+lib/
+  anthropic.ts              # Claude integration
+  gemini.ts                 # Gemini integration
+  db.ts                     # Prisma client
+  storage.ts                # image persistence
+types/
+  character.ts              # shared TypeScript interfaces
+prisma/
+  schema.prisma             # database schema
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev          # development server
+npm run build        # production build
+npm run start        # run production build
+npx prisma studio    # visual database browser
+```
