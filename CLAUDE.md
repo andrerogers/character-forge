@@ -1,5 +1,9 @@
 # CharacterForge — Claude Code Guide
 
+## Repository
+
+https://github.com/andrerogers/character-forge
+
 ## Project overview
 
 CharacterForge is a Next.js 16 app that lets users build fictional characters through a 3-step wizard. Claude (Anthropic) generates the character profile (name, description, backstory, colour palette, personality traits) and Gemini (Google) generates the portrait image. Characters are persisted in PostgreSQL via Prisma and rendered in a gallery.
