@@ -1,7 +1,7 @@
 "use client"
 
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { Chip } from "@/components/chip"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -59,14 +59,14 @@ export function StepOne({
         <label className="text-sm font-medium text-muted-foreground">Quick Start</label>
         <div className="flex flex-wrap gap-2">
           {QUICK_STARTS.map((qs) => (
-            <Badge
+            <Chip
               key={qs}
-              variant="secondary"
-              className="cursor-pointer text-xs py-1 px-2 hover:bg-primary/20 hover:text-primary transition-colors"
+              active={concept === qs}
+              className="text-xs px-2"
               onClick={() => onConceptChange(qs)}
             >
               {qs}
-            </Badge>
+            </Chip>
           ))}
         </div>
       </div>

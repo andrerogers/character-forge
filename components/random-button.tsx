@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CharacterFormData, GeneratedProfile } from "@/types/character"
@@ -64,6 +65,9 @@ export function RandomButton() {
       router.push(`/characters/${saved.id}`)
     } catch (err) {
       console.error(err)
+      toast.error("Random character failed", {
+        description: err instanceof Error ? err.message : undefined,
+      })
       setStage("idle")
     }
   }
