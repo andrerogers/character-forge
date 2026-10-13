@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Character {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
   description  String
   tagline      String?
@@ -17,8 +17,44 @@ model Character {
   personality  String[]
   backstory    String?
   colorPalette String[]
+  tags         String[]      @default([])
   imagePath    String?
   concept      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sketches     Sketch[]
+  guide        DrawingGuide?
+}
+
+model Sketch {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  imagePath   String
+  note        String?
+
+  @@index([characterId])
+}
+
+model DrawingGuide {
+  id               String        @id @default(cuid())
+  createdAt        DateTime      @default(now())
+  characterId      String        @unique
+  character        Character     @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  proportionSystem String?
+  overlayImagePath String?
+  steps            DrawingStep[]
+}
+
+model DrawingStep {
+  id           String       @id @default(cuid())
+  stepNumber   Int
+  title        String
+  instructions String
+  imagePath    String
+  guideId      String
+  guide        DrawingGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@unique([guideId, stepNumber])
 }
