@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { deleteImage } from "@/lib/storage"
+import { deleteCharacterWithFiles } from "@/lib/characters"
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const character = await prisma.character.findUnique({ where: { id } })
+  const character = await prisma.character.findUnique({
+    where: { id },
+    include: {
+      sketches: { orderBy: { createdAt: "desc" } },
+      guide: { include: { steps: { orderBy: { stepNumber: "asc" } } } },
+    },
+  })
   if (!character) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
@@ -19,16 +25,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const character = await prisma.character.findUnique({ where: { id } })
-  if (!character) {
+  const deleted = await deleteCharacterWithFiles(id)
+  if (!deleted) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
-
-  if (character.imagePath) {
-    await deleteImage(character.imagePath)
-  }
-
-  await prisma.character.delete({ where: { id } })
   return new NextResponse(null, { status: 204 })
 }
 
