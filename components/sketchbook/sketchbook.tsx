@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { del, messageOf, postForm } from "@/lib/api-client"
+import { LocalTime } from "@/components/local-time"
 import { Sketch } from "@/types/character"
 
 interface SketchbookProps {
@@ -112,7 +113,7 @@ export function Sketchbook({ characterId, characterName, initialSketches }: Sket
                 type="button"
                 className="relative block w-full aspect-square bg-muted focus-visible:outline-2 focus-visible:outline-ring"
                 onClick={() => setViewing(sketch)}
-                aria-label={`View sketch from ${new Date(sketch.createdAt).toLocaleString()}`}
+                aria-label={sketch.note ? `View sketch: ${sketch.note}` : "View sketch"}
               >
                 <Image
                   src={sketch.imagePath}
@@ -124,9 +125,7 @@ export function Sketchbook({ characterId, characterName, initialSketches }: Sket
               </button>
               <div className="p-3 flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <time className="block text-xs text-muted-foreground" dateTime={new Date(sketch.createdAt).toISOString()}>
-                    {new Date(sketch.createdAt).toLocaleString()}
-                  </time>
+                  <LocalTime className="block text-xs text-muted-foreground" value={sketch.createdAt} />
                   {sketch.note && <p className="text-sm mt-1 break-words">{sketch.note}</p>}
                 </div>
                 <Button
@@ -192,7 +191,7 @@ export function Sketchbook({ characterId, characterName, initialSketches }: Sket
                 <Image src={viewing.imagePath} alt={viewing.note ?? "Sketch"} fill className="object-contain" sizes="100vw" />
               </div>
               <p className="text-center text-sm text-white/80 pb-1">
-                {new Date(viewing.createdAt).toLocaleString()}
+                <LocalTime value={viewing.createdAt} />
                 {viewing.note ? ` — ${viewing.note}` : ""}
               </p>
             </>

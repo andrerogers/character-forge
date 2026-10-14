@@ -176,6 +176,8 @@ function ExerciseSession({
   const [timesUpDismissed, setTimesUpDismissed] = useState(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const tone = timerTone(remaining)
+  // Keep controls up while paused so Resume is always reachable.
+  const barVisible = controlsVisible || paused
 
   const showControls = useCallback(() => {
     setControlsVisible(true)
@@ -218,7 +220,7 @@ function ExerciseSession({
 
   return (
     <div
-      className={cn("fixed inset-0 z-50 bg-black select-none", !controlsVisible && "cursor-none")}
+      className={cn("fixed inset-0 z-50 bg-black select-none", !barVisible && "cursor-none")}
       onMouseMove={showControls}
       onTouchStart={showControls}
     >
@@ -265,7 +267,7 @@ function ExerciseSession({
       <div
         className={cn(
           "absolute bottom-0 inset-x-0 flex justify-center gap-2 p-4 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300",
-          controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          barVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onFocus={showControls}
       >

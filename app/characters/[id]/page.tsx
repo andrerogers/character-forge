@@ -10,6 +10,7 @@ import { deleteCharacterWithFiles } from "@/lib/characters"
 import { GuideProvider } from "@/components/guide/guide-context"
 import { GuideButton, GuideSection } from "@/components/guide/guide-section"
 import { Sketchbook } from "@/components/sketchbook/sketchbook"
+import { DeleteCharacterButton } from "@/components/delete-character-button"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -46,16 +47,7 @@ export default async function CharacterDetailPage({ params }: PageProps) {
             >
               ← Back to Gallery
             </Link>
-            <form action={handleDelete}>
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10"
-              >
-                Delete
-              </Button>
-            </form>
+            <DeleteCharacterButton name={c.name} action={handleDelete} />
           </div>
         </header>
 
@@ -70,6 +62,7 @@ export default async function CharacterDetailPage({ params }: PageProps) {
                     alt={c.name}
                     fill
                     className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 512px"
                     priority
                   />
                 ) : (
