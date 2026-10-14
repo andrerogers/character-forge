@@ -75,6 +75,11 @@ export async function saveSketch(buffer: Buffer, mimeType: string): Promise<stri
   return writeUpload("sketches", `${createId()}.${format.ext}`, output)
 }
 
+export async function saveVideo(buffer: Buffer, id: string): Promise<string> {
+  if (!SAFE_SEGMENT.test(id)) throw new Error("Invalid video id")
+  return writeUpload("videos", `${id}.mp4`, buffer)
+}
+
 // Step images keep stable names (step-<n>.png, overlay.png); the ?v= suffix
 // busts the browser cache when a guide is regenerated.
 export async function saveGuideImage(

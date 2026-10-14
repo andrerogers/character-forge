@@ -12,6 +12,7 @@ export async function GET(
     include: {
       sketches: { orderBy: { createdAt: "desc" } },
       guide: { include: { steps: { orderBy: { stepNumber: "asc" } } } },
+      videos: { orderBy: { createdAt: "desc" } },
     },
   })
   if (!character) {

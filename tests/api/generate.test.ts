@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { jsonRequest, sampleCharacter, type PrismaMock } from "../helpers"
 
 vi.mock("@/lib/db", async () => {
@@ -10,7 +10,7 @@ vi.mock("@/lib/anthropic", () => ({
   generateDrawingGuide: vi.fn(),
   generateRandomConcept: vi.fn(),
 }))
-vi.mock("@/lib/gemini", () => ({
+vi.mock("@/lib/artwork", () => ({
   generateCharacterImage: vi.fn(),
   generateGuideImage: vi.fn(),
 }))
@@ -22,7 +22,7 @@ vi.mock("@/lib/storage", () => ({
 
 import { prisma } from "@/lib/db"
 import { generateCharacterProfile, generateDrawingGuide, generateRandomConcept } from "@/lib/anthropic"
-import { generateCharacterImage, generateGuideImage } from "@/lib/gemini"
+import { generateCharacterImage, generateGuideImage } from "@/lib/artwork"
 import { saveImage, saveGuideImage, readPublicFile } from "@/lib/storage"
 import { POST as profileRoute } from "@/app/api/generate/profile/route"
 import { POST as imageRoute } from "@/app/api/generate/image/route"
@@ -30,6 +30,15 @@ import { POST as guideRoute } from "@/app/api/generate/guide/route"
 import { POST as randomRoute } from "@/app/api/generate/random/route"
 
 const db = prisma as unknown as PrismaMock
+
+const GEMINI = { provider: "gemini", model: "gemini-2.5-flash-image" }
+
+beforeEach(() => {
+  vi.stubEnv("GEMINI_API_KEY", "g")
+  vi.stubEnv("OPENROUTER_API_KEY", "o")
+  vi.stubEnv("HIGGSFIELD_API_KEY", "")
+  vi.stubEnv("IMAGE_PROVIDER", "")
+})
 
 describe("POST /api/generate/profile", () => {
   const form = { concept: "A ronin", style: "Manga", moods: [] }
@@ -70,11 +79,39 @@ describe("POST /api/generate/image (portrait)", () => {
       })
     )
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ imagePath: "/uploads/abc.png" })
+    expect(await res.json()).toEqual({ imagePath: "/uploads/abc.png", imageSource: "gemini:gemini-2.5-flash-image" })
     expect(generateCharacterImage).toHaveBeenCalledWith(profile, "Manga", {
       pose: "Profile",
       artists: ["Moebius"],
+      engine: GEMINI,
     })
+  })
+
+  it("uses the requested engine and reports which one made the image", async () => {
+    vi.mocked(generateCharacterImage).mockResolvedValue(Buffer.from("img"))
+    vi.mocked(saveImage).mockResolvedValue("/uploads/abc.png")
+    const engine = { provider: "openrouter", model: "black-forest-labs/flux.2-pro" }
+    const res = await imageRoute(
+      jsonRequest("/api/generate/image", "POST", { profile, style: "Manga", engine })
+    )
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      imagePath: "/uploads/abc.png",
+      imageSource: "openrouter:black-forest-labs/flux.2-pro",
+    })
+    expect(vi.mocked(generateCharacterImage).mock.calls[0][2]).toMatchObject({ engine })
+  })
+
+  it("400s for an engine that isn't configured or valid", async () => {
+    for (const engine of [
+      { provider: "higgsfield", model: "z-image/turbo" },
+      { provider: "openrouter", model: "not a model" },
+      "gemini",
+    ]) {
+      const res = await imageRoute(jsonRequest("/api/generate/image", "POST", { profile, style: "Manga", engine }))
+      expect(res.status).toBe(400)
+    }
+    expect(generateCharacterImage).not.toHaveBeenCalled()
   })
 
   it("400s without profile or style", async () => {
@@ -100,9 +137,12 @@ describe("POST /api/generate/image (guide)", () => {
 
     const res = await imageRoute(jsonRequest("/api/generate/image", "POST", body))
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ imagePath: "/uploads/guides/char1/step-2.png?v=1" })
+    expect(await res.json()).toEqual({
+      imagePath: "/uploads/guides/char1/step-2.png?v=1",
+      imageSource: "gemini:gemini-2.5-flash-image",
+    })
     expect(readPublicFile).toHaveBeenCalledWith("/uploads/char1.png")
-    expect(generateGuideImage).toHaveBeenCalledWith("gesture diagram", Buffer.from("portrait"))
+    expect(generateGuideImage).toHaveBeenCalledWith("gesture diagram", Buffer.from("portrait"), GEMINI)
     expect(saveGuideImage).toHaveBeenCalledWith(Buffer.from("img"), "char1", "step-2")
   })
 
@@ -113,7 +153,17 @@ describe("POST /api/generate/image (guide)", () => {
     vi.mocked(saveGuideImage).mockResolvedValue("/p")
     const res = await imageRoute(jsonRequest("/api/generate/image", "POST", body))
     expect(res.status).toBe(200)
-    expect(generateGuideImage).toHaveBeenCalledWith("gesture diagram", null)
+    expect(generateGuideImage).toHaveBeenCalledWith("gesture diagram", null, GEMINI)
+  })
+
+  it("generates guide images with the requested engine", async () => {
+    db.character.findUnique.mockResolvedValue(sampleCharacter)
+    vi.mocked(readPublicFile).mockResolvedValue(null)
+    vi.mocked(generateGuideImage).mockResolvedValue(Buffer.from("img"))
+    vi.mocked(saveGuideImage).mockResolvedValue("/p")
+    const engine = { provider: "openrouter", model: "openai/gpt-5.4-image-2" }
+    await imageRoute(jsonRequest("/api/generate/image", "POST", { ...body, engine }))
+    expect(generateGuideImage).toHaveBeenCalledWith("gesture diagram", null, engine)
   })
 
   it("400s for an invalid slot", async () => {

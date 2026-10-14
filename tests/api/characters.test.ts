@@ -39,6 +39,7 @@ describe("POST /api/characters", () => {
     colorPalette: ["#000000"],
     tags: ["Ronin", " ronin ", "Manga", ""],
     imagePath: "/uploads/x.png",
+    imageSource: "openrouter:black-forest-labs/flux.2-pro",
     // Ephemeral fields must never reach the database
     pose: "Profile",
     artists: ["Moebius"],
@@ -50,6 +51,7 @@ describe("POST /api/characters", () => {
     expect(res.status).toBe(201)
     const { data } = db.character.create.mock.calls[0][0]
     expect(data.tags).toEqual(["Ronin", "Manga"])
+    expect(data.imageSource).toBe("openrouter:black-forest-labs/flux.2-pro")
     expect(data).not.toHaveProperty("pose")
     expect(data).not.toHaveProperty("artists")
   })
@@ -82,6 +84,7 @@ describe("GET /api/characters/[id]", () => {
       include: {
         sketches: { orderBy: { createdAt: "desc" } },
         guide: { include: { steps: { orderBy: { stepNumber: "asc" } } } },
+        videos: { orderBy: { createdAt: "desc" } },
       },
     })
     const body = await res.json()

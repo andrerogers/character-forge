@@ -23,6 +23,7 @@ export default async function CharacterDetailPage({ params }: PageProps) {
     include: {
       sketches: { orderBy: { createdAt: "desc" } },
       guide: { include: { steps: { orderBy: { stepNumber: "asc" } } } },
+      videos: { orderBy: { createdAt: "desc" } },
     },
   })
 

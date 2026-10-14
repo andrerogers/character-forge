@@ -1,12 +1,10 @@
-import { GoogleGenAI } from "@google/genai"
+// Prompt building for portraits and guide diagrams. The image itself comes
+// from whichever engine (Gemini, OpenRouter, Higgsfield) the request picked.
 import { GeneratedProfile } from "@/types/character"
 import { poseDirective } from "@/lib/poses"
-
-const MODEL = "gemini-2.5-flash-image"
-
-const client = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-})
+import { generateImageWith } from "@/lib/media/images"
+import { defaultImageEngine } from "@/lib/media/registry"
+import type { Engine } from "@/lib/media/types"
 
 const STYLE_DIRECTIVES: Record<string, string> = {
   Comic:
@@ -27,6 +25,7 @@ const GUIDE_DIAGRAM_STYLE =
 interface PortraitOptions {
   pose?: string
   artists?: string[]
+  engine?: Engine
 }
 
 export function buildPortraitPrompt(
@@ -51,45 +50,25 @@ Color palette: ${profile.colorPalette.join(", ")}.
 Centered composition, character concept art, full portrait.`
 }
 
-async function generateImage(
-  contents: Parameters<typeof client.models.generateContent>[0]["contents"]
-): Promise<Buffer> {
-  const response = await client.models.generateContent({ model: MODEL, contents })
-
-  const parts = response.candidates?.[0]?.content?.parts
-  if (!parts) throw new Error("No content in Gemini response")
-
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      return Buffer.from(part.inlineData.data, "base64")
-    }
-  }
-
-  throw new Error("No image data in Gemini response")
-}
-
 export async function generateCharacterImage(
   profile: GeneratedProfile,
   style: string,
   options: PortraitOptions = {}
 ): Promise<Buffer> {
-  return generateImage(buildPortraitPrompt(profile, style, options))
+  return generateImageWith(options.engine ?? defaultImageEngine(), {
+    prompt: buildPortraitPrompt(profile, style, options),
+  })
 }
 
 // Guide step / overlay diagrams. When the character's portrait is available
 // it is attached so the diagram depicts the same character design.
 export async function generateGuideImage(
   prompt: string,
-  reference: Buffer | null
+  reference: Buffer | null,
+  engine: Engine = defaultImageEngine()
 ): Promise<Buffer> {
   const text = reference
     ? `${prompt}\n\nUse the attached portrait only as a reference for the character's design.\n${GUIDE_DIAGRAM_STYLE}`
     : `${prompt}\n\n${GUIDE_DIAGRAM_STYLE}`
-
-  const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [{ text }]
-  if (reference) {
-    parts.push({ inlineData: { mimeType: "image/png", data: reference.toString("base64") } })
-  }
-
-  return generateImage([{ role: "user", parts }])
+  return generateImageWith(engine, { prompt: text, reference })
 }

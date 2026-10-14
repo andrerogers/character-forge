@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       colorPalette: stringArray(body.colorPalette),
       tags: normalizeTags(body.tags),
       imagePath: (body.imagePath as string) ?? null,
+      imageSource: typeof body.imageSource === "string" ? body.imageSource : null,
       concept: body.concept as string,
     },
   })
