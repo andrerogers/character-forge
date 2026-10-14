@@ -3,6 +3,9 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Chip } from "@/components/chip"
+import { ARTIST_PRESETS, addArtists } from "@/lib/artists"
+import { POSES } from "@/lib/poses"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -36,11 +39,13 @@ interface StepTwoProps {
   age: string
   moods: string[]
   colorLabel: string
+  pose: string
   artists: string[]
   onNameChange: (v: string) => void
   onAgeChange: (v: string) => void
   onMoodsChange: (v: string[]) => void
   onColorChange: (v: string) => void
+  onPoseChange: (v: string) => void
   onArtistsChange: (v: string[]) => void
   onBack: () => void
   onNext: () => void
@@ -51,24 +56,31 @@ export function StepTwo({
   age,
   moods,
   colorLabel,
+  pose,
   artists = [],
   onNameChange,
   onAgeChange,
   onMoodsChange,
   onColorChange,
+  onPoseChange,
   onArtistsChange,
   onBack,
   onNext,
 }: StepTwoProps) {
   const [artistInput, setArtistInput] = useState("")
 
-  const addArtist = () => {
-    const trimmed = artistInput.trim()
-    if (trimmed && !artists.includes(trimmed)) {
-      onArtistsChange([...artists, trimmed])
-    }
+  const addArtist = (name: string) => {
+    const next = addArtists(artists, name)
+    if (next.length !== artists.length) onArtistsChange(next)
+  }
+
+  const addTypedArtist = () => {
+    addArtist(artistInput)
     setArtistInput("")
   }
+
+  const hasArtist = (name: string) =>
+    artists.some((a) => a.toLowerCase() === name.toLowerCase())
 
   const removeArtist = (artist: string) => {
     onArtistsChange(artists.filter((a) => a !== artist))
@@ -126,15 +138,9 @@ export function StepTwo({
           {MOODS.map((mood) => {
             const active = moods.includes(mood)
             return (
-              <Badge
-                key={mood}
-                variant={active ? "default" : "secondary"}
-                className="cursor-pointer text-sm py-1 px-3 transition-colors"
-                style={active ? { backgroundColor: "#7C3AED" } : {}}
-                onClick={() => toggleMood(mood)}
-              >
+              <Chip key={mood} active={active} onClick={() => toggleMood(mood)}>
                 {mood}
-              </Badge>
+              </Chip>
             )
           })}
         </div>
@@ -160,6 +166,24 @@ export function StepTwo({
       </div>
 
       <div className="space-y-2">
+        <label className="text-sm font-medium" id="pose-label">
+          Pose / Angle{" "}
+          <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="pose-label">
+          {POSES.map((p) => (
+            <Chip
+              key={p}
+              active={pose === p}
+              onClick={() => onPoseChange(pose === p ? "" : p)}
+            >
+              {p}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
         <label className="text-sm font-medium">
           Artist Inspiration{" "}
           <span className="text-muted-foreground font-normal">(optional)</span>
@@ -169,12 +193,28 @@ export function StepTwo({
             placeholder="e.g. Todd McFarlane, Moebius, Norman Rockwell…"
             value={artistInput}
             onChange={(e) => setArtistInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addArtist() } }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTypedArtist() } }}
             className="bg-card border-border"
           />
-          <Button variant="outline" className="border-border" onClick={addArtist}>
+          <Button variant="outline" className="border-border" onClick={addTypedArtist}>
             Add
           </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {ARTIST_PRESETS.map((name) => (
+            <Chip
+              key={name}
+              active={hasArtist(name)}
+              className="text-xs"
+              onClick={() =>
+                hasArtist(name)
+                  ? onArtistsChange(artists.filter((a) => a.toLowerCase() !== name.toLowerCase()))
+                  : addArtist(name)
+              }
+            >
+              {hasArtist(name) ? "✓" : "+"} {name}
+            </Chip>
+          ))}
         </div>
         {artists.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">

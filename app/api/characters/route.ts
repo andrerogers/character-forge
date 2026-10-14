@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { jsonError, readJson } from "@/lib/http"
+import { normalizeTags } from "@/lib/tags"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -25,21 +27,35 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(characters)
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json()
+const stringArray = (v: unknown) =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []
 
+export async function POST(request: NextRequest) {
+  const body = await readJson(request)
+  if (!body) return jsonError("Invalid JSON body", 400)
+
+  for (const field of ["name", "description", "style", "concept"]) {
+    const value = body[field]
+    if (typeof value !== "string" || !value.trim()) {
+      return jsonError(`${field} is required`, 400)
+    }
+  }
+
+  // Only known fields are persisted; ephemeral wizard inputs (pose, artists)
+  // are dropped here.
   const character = await prisma.character.create({
     data: {
-      name: body.name,
-      description: body.description,
-      tagline: body.tagline ?? null,
-      style: body.style,
-      age: body.age ?? null,
-      personality: body.personality ?? [],
-      backstory: body.backstory ?? null,
-      colorPalette: body.colorPalette ?? [],
-      imagePath: body.imagePath ?? null,
-      concept: body.concept,
+      name: body.name as string,
+      description: body.description as string,
+      tagline: (body.tagline as string) ?? null,
+      style: body.style as string,
+      age: (body.age as string) ?? null,
+      personality: stringArray(body.personality),
+      backstory: (body.backstory as string) ?? null,
+      colorPalette: stringArray(body.colorPalette),
+      tags: normalizeTags(body.tags),
+      imagePath: (body.imagePath as string) ?? null,
+      concept: body.concept as string,
     },
   })
 

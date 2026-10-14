@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { toast } from "sonner"
 import { StepIndicator } from "@/components/creator/step-indicator"
 import { StepOne } from "@/components/creator/step-one"
 import { StepTwo } from "@/components/creator/step-two"
-import { StepThree } from "@/components/creator/step-three"
+import { StepThree, type GenerationPhase } from "@/components/creator/step-three"
 import { GeneratedProfile } from "@/types/character"
+import { messageOf, postJson } from "@/lib/api-client"
 
 interface FormData {
   concept: string
@@ -15,6 +17,7 @@ interface FormData {
   age: string
   moods: string[]
   colorLabel: string
+  pose: string
   artists: string[]
 }
 
@@ -25,74 +28,79 @@ const DEFAULT_FORM: FormData = {
   age: "",
   moods: [],
   colorLabel: "",
+  pose: "",
   artists: [],
 }
 
 export default function NewCharacterPage() {
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM)
-  const [loading, setLoading] = useState(false)
+  const [phase, setPhase] = useState<GenerationPhase>("idle")
   const [profile, setProfile] = useState<GeneratedProfile | null>(null)
   const [imagePath, setImagePath] = useState<string | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
 
   const update = (key: keyof FormData, value: string | string[]) =>
     setFormData((prev) => ({ ...prev, [key]: value }))
 
-  const handleGenerate = async () => {
-    setStep(3)
-    setLoading(true)
-    setProfile(null)
-    setImagePath(null)
-
+  const generatePortrait = async (forProfile: GeneratedProfile) => {
+    setPhase("image")
+    setImageError(null)
     try {
-      // Generate profile and image in parallel
-      const [profileRes, imageRes] = await Promise.all([
-        fetch("/api/generate/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            concept: formData.concept,
-            style: formData.style,
-            name: formData.name || undefined,
-            age: formData.age || undefined,
-            moods: formData.moods,
-            colorLabel: formData.colorLabel || undefined,
-          }),
-        }),
-        // We need profile first for image, so we chain below
-        Promise.resolve(null),
-      ])
-
-      if (!profileRes.ok) throw new Error("Profile generation failed")
-      const generatedProfile: GeneratedProfile = await profileRes.json()
-      setProfile(generatedProfile)
-
-      // Now generate image with the profile
-      const imgRes = await fetch("/api/generate/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          profile: generatedProfile,
-          style: formData.style,
-          artists: formData.artists.length > 0 ? formData.artists : undefined,
-        }),
+      // Pose and artists are ephemeral: they shape the image prompt only.
+      const { imagePath: path } = await postJson<{ imagePath: string }>("/api/generate/image", {
+        profile: forProfile,
+        style: formData.style,
+        pose: formData.pose || undefined,
+        artists: formData.artists.length > 0 ? formData.artists : undefined,
       })
-
-      if (imgRes.ok) {
-        const { imagePath: path } = await imgRes.json()
-        setImagePath(path)
-      }
+      setImagePath(path)
     } catch (err) {
-      console.error(err)
+      setImageError(messageOf(err))
+      toast.error("Portrait generation failed", { description: messageOf(err) })
     } finally {
-      setLoading(false)
+      setPhase("idle")
     }
   }
 
-  const handleRegenerate = () => {
+  // Also used by "Regenerate": re-runs both calls with the current form data
+  // and replaces the preview.
+  const handleGenerate = async () => {
+    setStep(3)
+    setPhase("profile")
+    setProfile(null)
+    setImagePath(null)
+    setProfileError(null)
+    setImageError(null)
+
+    let generated: GeneratedProfile
+    try {
+      generated = await postJson<GeneratedProfile>("/api/generate/profile", {
+        concept: formData.concept,
+        style: formData.style,
+        name: formData.name || undefined,
+        age: formData.age || undefined,
+        moods: formData.moods,
+        colorLabel: formData.colorLabel || undefined,
+      })
+    } catch (err) {
+      setProfileError(messageOf(err))
+      setPhase("idle")
+      toast.error("Profile generation failed", { description: messageOf(err) })
+      return
+    }
+
+    setProfile(generated)
+    await generatePortrait(generated)
+  }
+
+  const handleStartOver = () => {
     setStep(1)
     setProfile(null)
     setImagePath(null)
+    setProfileError(null)
+    setImageError(null)
   }
 
   return (
@@ -130,11 +138,13 @@ export default function NewCharacterPage() {
               age={formData.age}
               moods={formData.moods}
               colorLabel={formData.colorLabel}
+              pose={formData.pose}
               artists={formData.artists}
               onNameChange={(v) => update("name", v)}
               onAgeChange={(v) => update("age", v)}
               onMoodsChange={(v) => update("moods", v)}
               onColorChange={(v) => update("colorLabel", v)}
+              onPoseChange={(v) => update("pose", v)}
               onArtistsChange={(v) => update("artists", v)}
               onBack={() => setStep(1)}
               onNext={handleGenerate}
@@ -142,12 +152,16 @@ export default function NewCharacterPage() {
           )}
           {step === 3 && (
             <StepThree
-              loading={loading}
+              phase={phase}
               profile={profile}
               imagePath={imagePath}
+              profileError={profileError}
+              imageError={imageError}
               formData={formData}
-              onBack={handleRegenerate}
+              onBack={handleStartOver}
+              onEditDetails={() => setStep(2)}
               onRegenerate={handleGenerate}
+              onRetryImage={() => profile && generatePortrait(profile)}
             />
           )}
         </div>
