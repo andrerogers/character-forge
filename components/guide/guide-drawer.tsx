@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 import { MAX_GUIDE_STEPS, MIN_GUIDE_STEPS } from "@/lib/guide"
 import { PROPORTION_SYSTEMS, isProportionSystem } from "@/lib/proportions"
 import { type ImageStatus, useGuide } from "./guide-context"
+import { EnginePicker } from "@/components/engine-picker"
+import { useMediaOptions } from "@/hooks/use-media-options"
 
 interface StepView {
   stepNumber: number
@@ -117,7 +119,20 @@ export function GuideDrawer() {
 }
 
 function SetupPanel() {
-  const { stepCount, setStepCount, includeOverlay, setIncludeOverlay, generate, planError } = useGuide()
+  const {
+    stepCount,
+    setStepCount,
+    includeOverlay,
+    setIncludeOverlay,
+    imageEngine,
+    setImageEngine,
+    generate,
+    planError,
+  } = useGuide()
+  const media = useMediaOptions()
+  const providers = media?.image.providers ?? []
+  const engine = imageEngine ?? media?.image.default ?? null
+  const engineChoice = providers.length > 1 || providers.some((p) => p.models.length > 1 || p.allowCustomModel)
   const counts = Array.from({ length: MAX_GUIDE_STEPS - MIN_GUIDE_STEPS + 1 }, (_, i) => i + MIN_GUIDE_STEPS)
 
   return (
@@ -131,8 +146,8 @@ function SetupPanel() {
       <div>
         <h3 className="text-xl font-semibold">Create a step-by-step guide</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Claude writes the steps and Gemini draws an instructional diagram for each one. The
-          finished guide is saved with this character.
+          Claude writes the steps, then an image model draws an instructional diagram for each
+          one. The finished guide is saved with this character.
         </p>
       </div>
 
@@ -165,6 +180,16 @@ function SetupPanel() {
         </span>
       </label>
 
+      {engine && engineChoice && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Diagram image model</p>
+          <EnginePicker idPrefix="guide-engine" providers={providers} value={engine} onChange={setImageEngine} />
+          <p className="text-xs text-muted-foreground">
+            Models that accept a reference image will draw diagrams of this exact character.
+          </p>
+        </div>
+      )}
+
       {planError && (
         <p className="text-sm text-destructive flex gap-2" role="alert">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -172,7 +197,12 @@ function SetupPanel() {
         </p>
       )}
 
-      <Button type="submit" className="w-full" style={{ backgroundColor: "#7C3AED" }}>
+      <Button
+        type="submit"
+        className="w-full"
+        style={{ backgroundColor: "#7C3AED" }}
+        disabled={!!engine && !engine.model}
+      >
         Generate Guide
       </Button>
     </form>

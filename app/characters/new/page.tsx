@@ -9,6 +9,7 @@ import { StepTwo } from "@/components/creator/step-two"
 import { StepThree, type GenerationPhase } from "@/components/creator/step-three"
 import { GeneratedProfile } from "@/types/character"
 import { messageOf, postJson } from "@/lib/api-client"
+import type { Engine } from "@/lib/media/types"
 
 interface FormData {
   concept: string
@@ -38,6 +39,9 @@ export default function NewCharacterPage() {
   const [phase, setPhase] = useState<GenerationPhase>("idle")
   const [profile, setProfile] = useState<GeneratedProfile | null>(null)
   const [imagePath, setImagePath] = useState<string | null>(null)
+  const [imageSource, setImageSource] = useState<string | null>(null)
+  // null = the server's default engine
+  const [imageEngine, setImageEngine] = useState<Engine | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
 
@@ -49,13 +53,15 @@ export default function NewCharacterPage() {
     setImageError(null)
     try {
       // Pose and artists are ephemeral: they shape the image prompt only.
-      const { imagePath: path } = await postJson<{ imagePath: string }>("/api/generate/image", {
+      const result = await postJson<{ imagePath: string; imageSource: string }>("/api/generate/image", {
         profile: forProfile,
         style: formData.style,
         pose: formData.pose || undefined,
         artists: formData.artists.length > 0 ? formData.artists : undefined,
+        engine: imageEngine ?? undefined,
       })
-      setImagePath(path)
+      setImagePath(result.imagePath)
+      setImageSource(result.imageSource)
     } catch (err) {
       setImageError(messageOf(err))
       toast.error("Portrait generation failed", { description: messageOf(err) })
@@ -71,6 +77,7 @@ export default function NewCharacterPage() {
     setPhase("profile")
     setProfile(null)
     setImagePath(null)
+    setImageSource(null)
     setProfileError(null)
     setImageError(null)
 
@@ -140,6 +147,8 @@ export default function NewCharacterPage() {
               colorLabel={formData.colorLabel}
               pose={formData.pose}
               artists={formData.artists}
+              imageEngine={imageEngine}
+              onImageEngineChange={setImageEngine}
               onNameChange={(v) => update("name", v)}
               onAgeChange={(v) => update("age", v)}
               onMoodsChange={(v) => update("moods", v)}
@@ -155,6 +164,7 @@ export default function NewCharacterPage() {
               phase={phase}
               profile={profile}
               imagePath={imagePath}
+              imageSource={imageSource}
               profileError={profileError}
               imageError={imageError}
               formData={formData}

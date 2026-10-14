@@ -10,6 +10,7 @@ import { deleteCharacterWithFiles } from "@/lib/characters"
 import { GuideProvider } from "@/components/guide/guide-context"
 import { GuideButton, GuideSection } from "@/components/guide/guide-section"
 import { Sketchbook } from "@/components/sketchbook/sketchbook"
+import { VideoStudio } from "@/components/videos/video-studio"
 import { DeleteCharacterButton } from "@/components/delete-character-button"
 
 interface PageProps {
@@ -188,12 +189,22 @@ export default async function CharacterDetailPage({ params }: PageProps) {
                 <p className="text-xs text-muted-foreground mt-1">
                   Created {new Date(c.createdAt).toLocaleDateString()}
                 </p>
+                {c.imageSource && (
+                  <p className="text-xs text-muted-foreground mt-1">Portrait by {c.imageSource}</p>
+                )}
               </div>
             </div>
           </div>
 
           <div className="mt-12 space-y-12">
             <GuideSection />
+            <VideoStudio
+              characterId={c.id}
+              characterName={c.name}
+              characterDescription={c.description}
+              hasPortrait={!!c.imagePath}
+              initialVideos={c.videos}
+            />
             <Sketchbook
               characterId={c.id}
               characterName={c.name}

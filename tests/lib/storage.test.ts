@@ -118,6 +118,11 @@ describe("saveVideo", () => {
     expect((await readFile(onDisk(p))).toString()).toBe("mp4")
   })
 
+  it("names WebM clips .webm by their signature", async () => {
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from("rest")])
+    expect(await saveVideo(webm, "vid2")).toBe("/uploads/videos/vid2.webm")
+  })
+
   it("rejects unsafe ids", async () => {
     await expect(saveVideo(Buffer.from("x"), "../evil")).rejects.toThrow()
   })
