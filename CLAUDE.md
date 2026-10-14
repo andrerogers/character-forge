@@ -11,17 +11,21 @@ CharacterForge is a local-first, single-user Next.js 16 app for hobbyist artists
 ## Development commands
 
 ```bash
-npm run dev       # start Next.js dev server (Turbopack)
-npm run build     # production build
-npm run start     # run production build
-npm test          # Vitest suite (API routes + lib); needs no DB or API keys
-npx prisma migrate dev   # apply schema changes and regenerate client
-npx prisma studio        # open Prisma visual DB browser
+npm run setup       # first run: create .env.local, start Postgres (Docker), apply migrations
+npm run dev         # start Postgres if needed, apply migrations, Next.js dev server (Turbopack)
+npm run dev:app     # Next.js only
+npm run build       # prisma generate + production build
+npm test            # Vitest suite (API routes + lib); needs no DB or API keys
+npm run typecheck   # tsc --noEmit
+npm run db:migrate  # after changing schema.prisma: create + apply a migration
+npm run db:up | db:down | db:deploy | db:reset | db:studio | db:logs
 ```
+
+`next.config.ts` pins `turbopack.root` to the project folder; without it a lockfile in a parent directory makes Turbopack resolve packages (e.g. tailwindcss) from the wrong place.
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` at the project root (`prisma.config.ts` loads `.env.local` too, so the Prisma CLI uses the same file):
+`npm run setup` (and `npm run dev`) create `.env.local` from `.env.example` if it's missing and warn about missing keys (`scripts/setup-env.mjs`). `prisma.config.ts` loads `.env.local` too, so the Prisma CLI uses the same file, and falls back to the Compose database URL so `prisma generate` works before the file exists:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...        # required
@@ -40,11 +44,13 @@ DATABASE_URL=postgresql://character_forge:character_forge@localhost:5432/charact
 Docker Compose spins up a local Postgres 16 instance:
 
 ```bash
-docker compose up -d   # start DB
-docker compose down    # stop DB
+npm run db:up     # docker compose up -d --wait (healthcheck: pg_isready)
+npm run db:down   # docker compose down (data kept in the postgres_data volume)
 ```
 
-Models live in `prisma/schema.prisma`: `Character` (with `tags String[]`), `Sketch` (many per character), `DrawingGuide` (at most one per character), `DrawingStep` (ordered by `stepNumber`) and `Video` (a provider job plus the downloaded clip). Sketches, guides and videos cascade-delete with their character. `Character.imageSource` records the `provider:model` that made the portrait. After changing the schema always run `npx prisma migrate dev`.
+Set `DB_PORT` to publish it on another host port.
+
+Models live in `prisma/schema.prisma`: `Character` (with `tags String[]`), `Sketch` (many per character), `DrawingGuide` (at most one per character), `DrawingStep` (ordered by `stepNumber`) and `Video` (a provider job plus the downloaded clip). Sketches, guides and videos cascade-delete with their character. `Character.imageSource` records the `provider:model` that made the portrait. After changing the schema always run `npm run db:migrate`.
 
 ## Architecture
 
