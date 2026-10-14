@@ -21,6 +21,7 @@ describe("deleteCharacterWithFiles", () => {
     db.character.findUnique.mockResolvedValue({
       ...sampleCharacter,
       sketches: [{ imagePath: "/uploads/sketches/a.png" }, { imagePath: "/uploads/sketches/b.jpg" }],
+      videos: [{ videoPath: "/uploads/videos/v1.mp4" }, { videoPath: null }],
     })
     db.character.delete.mockResolvedValue({})
 
@@ -29,6 +30,8 @@ describe("deleteCharacterWithFiles", () => {
     expect(deleteImage).toHaveBeenCalledWith("/uploads/char1.png")
     expect(deleteImage).toHaveBeenCalledWith("/uploads/sketches/a.png")
     expect(deleteImage).toHaveBeenCalledWith("/uploads/sketches/b.jpg")
+    expect(deleteImage).toHaveBeenCalledWith("/uploads/videos/v1.mp4")
+    expect(deleteImage).toHaveBeenCalledTimes(4)
     expect(deleteGuideImages).toHaveBeenCalledWith("char1")
   })
 

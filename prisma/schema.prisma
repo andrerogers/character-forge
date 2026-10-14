@@ -19,11 +19,14 @@ model Character {
   colorPalette String[]
   tags         String[]      @default([])
   imagePath    String?
+  // "provider:model" that made the portrait, e.g. "openrouter:google/gemini-2.5-flash-image"
+  imageSource  String?
   concept      String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   sketches     Sketch[]
   guide        DrawingGuide?
+  videos       Video[]
 }
 
 model Sketch {
@@ -57,4 +60,26 @@ model DrawingStep {
   guide        DrawingGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
 
   @@unique([guideId, stepNumber])
+}
+
+model Video {
+  id               String    @id @default(cuid())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  characterId      String
+  character        Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  provider         String // "openrouter" | "higgsfield"
+  model            String
+  mode             String // "text" (text-to-video) | "image" (animate the portrait)
+  prompt           String
+  durationSeconds  Int
+  sound            Boolean   @default(false)
+  status           String // "pending" | "saving" | "completed" | "failed"
+  jobId            String?
+  videoPath        String?
+  error            String?
+  estimatedCostUsd Float?
+  costUsd          Float?
+
+  @@index([characterId])
 }

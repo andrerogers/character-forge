@@ -15,6 +15,7 @@ interface StepThreeProps {
   phase: GenerationPhase
   profile: GeneratedProfile | null
   imagePath: string | null
+  imageSource: string | null
   profileError: string | null
   imageError: string | null
   formData: CharacterFormData
@@ -46,6 +47,7 @@ export function StepThree({
   phase,
   profile,
   imagePath,
+  imageSource,
   profileError,
   imageError,
   formData,
@@ -68,6 +70,7 @@ export function StepThree({
         age: formData.age || null,
         concept: formData.concept,
         imagePath: imagePath ?? null,
+        imageSource: imagePath ? imageSource : null,
       })
       toast.success(`${profile.name} saved to the gallery`)
       router.push(`/characters/${saved.id}`)
@@ -162,6 +165,10 @@ export function StepThree({
           <p className="text-muted-foreground text-sm leading-relaxed">
             {profile.description}
           </p>
+
+          {imagePath && imageSource && (
+            <p className="text-xs text-muted-foreground">Portrait by {imageSource}</p>
+          )}
 
           <div className="flex flex-wrap gap-2">
             {profile.personality.map((trait) => (

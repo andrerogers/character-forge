@@ -21,6 +21,7 @@ export function errorMessage(err: unknown) {
   if (typeof status === "number") {
     if (status === 429) return "the AI service is rate limiting requests; wait a moment and retry"
     if (status === 401 || status === 403) return "the API key was rejected; check .env.local"
+    if (status === 402) return "the account is out of credits"
     return `the AI service returned an error (${status})`
   }
   const message = err instanceof Error ? err.message : String(err)

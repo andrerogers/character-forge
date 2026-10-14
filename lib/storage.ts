@@ -75,6 +75,16 @@ export async function saveSketch(buffer: Buffer, mimeType: string): Promise<stri
   return writeUpload("sketches", `${createId()}.${format.ext}`, output)
 }
 
+const WEBM_SIGNATURE = Buffer.from([0x1a, 0x45, 0xdf, 0xa3])
+
+// Providers return MP4; WebM is recognised by its signature so the browser
+// gets the right file type.
+export async function saveVideo(buffer: Buffer, id: string): Promise<string> {
+  if (!SAFE_SEGMENT.test(id)) throw new Error("Invalid video id")
+  const ext = buffer.subarray(0, 4).equals(WEBM_SIGNATURE) ? "webm" : "mp4"
+  return writeUpload("videos", `${id}.${ext}`, buffer)
+}
+
 // Step images keep stable names (step-<n>.png, overlay.png); the ?v= suffix
 // busts the browser cache when a guide is regenerated.
 export async function saveGuideImage(

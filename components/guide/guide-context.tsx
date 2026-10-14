@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { del, messageOf, postJson } from "@/lib/api-client"
 import { DEFAULT_GUIDE_STEPS } from "@/lib/guide"
 import { DrawingGuide, GuidePlan } from "@/types/character"
+import type { Engine } from "@/lib/media/types"
 
 export type ImageStatus = "pending" | "done" | "error"
 
@@ -21,6 +22,7 @@ export interface GuideDraft {
   plan: GuidePlan
   images: GuideImageState[] // one per step, then the overlay if requested
   saving: boolean
+  engine: Engine | null // null = server default; retries reuse it
 }
 
 type Phase = "setup" | "planning" | "generating" | "saved"
@@ -36,6 +38,8 @@ interface GuideContextValue {
   activeStep: number
   stepCount: number
   includeOverlay: boolean
+  imageEngine: Engine | null
+  setImageEngine: (engine: Engine) => void
   setStepCount: (n: number) => void
   setIncludeOverlay: (v: boolean) => void
   openGuide: (stepIndex?: number) => void
@@ -75,6 +79,7 @@ export function GuideProvider({
   const [activeStep, setActiveStep] = useState(0)
   const [stepCount, setStepCount] = useState(DEFAULT_GUIDE_STEPS)
   const [includeOverlay, setIncludeOverlay] = useState(false)
+  const [imageEngine, setImageEngine] = useState<Engine | null>(null)
 
   const phase: Phase = guide ? "saved" : draft ? "generating" : planning ? "planning" : "setup"
 
@@ -90,13 +95,14 @@ export function GuideProvider({
   }, [])
 
   const requestImage = useCallback(
-    async (slot: string, prompt: string) => {
+    async (slot: string, prompt: string, engine: Engine | null) => {
       updateImage(slot, { status: "pending", error: undefined })
       try {
         const { imagePath } = await postJson<{ imagePath: string }>("/api/generate/image", {
           characterId,
           slot,
           prompt,
+          engine: engine ?? undefined,
         })
         updateImage(slot, { status: "done", imagePath })
       } catch (err) {
@@ -133,16 +139,16 @@ export function GuideProvider({
     if (plan.overlayPrompt) {
       images.push({ slot: "overlay", prompt: plan.overlayPrompt, status: "pending" })
     }
-    setDraft({ plan, images, saving: false })
+    setDraft({ plan, images, saving: false, engine: imageEngine })
 
-    // One Gemini call per image, all in parallel; each step renders as it lands.
-    images.forEach((img) => requestImage(img.slot, img.prompt))
-  }, [characterId, stepCount, includeOverlay, requestImage])
+    // One image call per step, all in parallel; each step renders as it lands.
+    images.forEach((img) => requestImage(img.slot, img.prompt, imageEngine))
+  }, [characterId, stepCount, includeOverlay, imageEngine, requestImage])
 
   const retryImage = useCallback(
     (slot: string) => {
       const img = draft?.images.find((i) => i.slot === slot)
-      if (img) requestImage(slot, img.prompt)
+      if (img) requestImage(slot, img.prompt, draft!.engine)
     },
     [draft, requestImage]
   )
@@ -205,6 +211,8 @@ export function GuideProvider({
         activeStep,
         stepCount,
         includeOverlay,
+        imageEngine,
+        setImageEngine,
         setStepCount,
         setIncludeOverlay,
         openGuide,

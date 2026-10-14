@@ -9,6 +9,7 @@ import {
   saveSketch,
   saveGuideImage,
   deleteGuideImages,
+  saveVideo,
 } from "@/lib/storage"
 
 let root: string
@@ -107,5 +108,22 @@ describe("guide images", () => {
     const guides = await readdir(path.join(root, "public", "uploads", "guides"))
     expect(guides).toEqual([])
     await expect(deleteGuideImages("missing")).resolves.toBeUndefined()
+  })
+})
+
+describe("saveVideo", () => {
+  it("writes the clip under uploads/videos", async () => {
+    const p = await saveVideo(Buffer.from("mp4"), "vid1")
+    expect(p).toBe("/uploads/videos/vid1.mp4")
+    expect((await readFile(onDisk(p))).toString()).toBe("mp4")
+  })
+
+  it("names WebM clips .webm by their signature", async () => {
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from("rest")])
+    expect(await saveVideo(webm, "vid2")).toBe("/uploads/videos/vid2.webm")
+  })
+
+  it("rejects unsafe ids", async () => {
+    await expect(saveVideo(Buffer.from("x"), "../evil")).rejects.toThrow()
   })
 })

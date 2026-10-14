@@ -10,6 +10,7 @@ export interface Character {
   colorPalette: string[]
   tags: string[]
   imagePath: string | null
+  imageSource: string | null
   concept: string
   createdAt: Date
   updatedAt: Date
@@ -80,7 +81,29 @@ export interface DrawingGuide {
   steps: DrawingStep[]
 }
 
+export type VideoStatus = "pending" | "saving" | "completed" | "failed"
+
+export interface Video {
+  id: string
+  createdAt: Date | string
+  updatedAt: Date | string
+  characterId: string
+  provider: string
+  model: string
+  mode: string // "text" | "image"
+  prompt: string
+  durationSeconds: number
+  sound: boolean
+  status: string
+  jobId: string | null
+  videoPath: string | null
+  error: string | null
+  estimatedCostUsd: number | null
+  costUsd: number | null
+}
+
 export interface CharacterWithRelations extends Character {
   sketches: Sketch[]
   guide: DrawingGuide | null
+  videos: Video[]
 }

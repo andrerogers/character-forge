@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Chip } from "@/components/chip"
 import { ARTIST_PRESETS, addArtists } from "@/lib/artists"
 import { POSES } from "@/lib/poses"
+import { EnginePicker } from "@/components/engine-picker"
+import { useMediaOptions } from "@/hooks/use-media-options"
+import type { Engine } from "@/lib/media/types"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -41,12 +44,14 @@ interface StepTwoProps {
   colorLabel: string
   pose: string
   artists: string[]
+  imageEngine: Engine | null
   onNameChange: (v: string) => void
   onAgeChange: (v: string) => void
   onMoodsChange: (v: string[]) => void
   onColorChange: (v: string) => void
   onPoseChange: (v: string) => void
   onArtistsChange: (v: string[]) => void
+  onImageEngineChange: (v: Engine) => void
   onBack: () => void
   onNext: () => void
 }
@@ -58,16 +63,24 @@ export function StepTwo({
   colorLabel,
   pose,
   artists = [],
+  imageEngine,
   onNameChange,
   onAgeChange,
   onMoodsChange,
   onColorChange,
   onPoseChange,
   onArtistsChange,
+  onImageEngineChange,
   onBack,
   onNext,
 }: StepTwoProps) {
   const [artistInput, setArtistInput] = useState("")
+  const media = useMediaOptions()
+  const imageProviders = media?.image.providers ?? []
+  const engine = imageEngine ?? media?.image.default ?? null
+  // Only worth showing when there's an actual choice to make
+  const engineChoice =
+    imageProviders.length > 1 || imageProviders.some((p) => p.models.length > 1 || p.allowCustomModel)
 
   const addArtist = (name: string) => {
     const next = addArtists(artists, name)
@@ -234,6 +247,18 @@ export function StepTwo({
         )}
       </div>
 
+      {engine && engineChoice && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Image Model</p>
+          <EnginePicker
+            idPrefix="portrait-engine"
+            providers={imageProviders}
+            value={engine}
+            onChange={onImageEngineChange}
+          />
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Button
           variant="outline"
@@ -246,6 +271,7 @@ export function StepTwo({
           className="flex-1"
           style={{ backgroundColor: "#7C3AED" }}
           onClick={onNext}
+          disabled={!!engine && !engine.model}
         >
           Generate Character
         </Button>

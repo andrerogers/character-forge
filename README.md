@@ -13,6 +13,8 @@ A local-first Next.js app for hobbyist artists and comic/manga creators. Describ
 - **Exercise mode** — fullscreen timed drawing practice (1, 2, 5, 10 or 1–60 custom minutes) over the portrait
 - **Drawing guide** — 2–8 step construction guide with an instructional diagram per step and an optional anatomy proportion overlay; saved with the character
 - **Sketchbook** — upload photos or scans of your attempts (resized to 2048px max) with optional notes
+- **Choice of image model** — portraits and guide diagrams can use Gemini directly, any OpenRouter image model, or Higgsfield (Z-Image Turbo, Marketing Studio)
+- **Videos** — animate a character's portrait (image-to-video) or generate a clip from text, on OpenRouter (any video model, e.g. Veo 3.1) or Higgsfield (Seedance 2.5, Kling 3.0, PixVerse v6). Every video is priced before it's made; silent unless you ask for sound; 5 s by default, 10 s max
 - **Art styles** — Comic, Manga, Sketch, Freeform
 - **Dark / light theme**
 
@@ -24,7 +26,8 @@ A local-first Next.js app for hobbyist artists and comic/manga creators. Describ
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | AI — profiles | Anthropic Claude claude-sonnet-4-6 |
-| AI — images | Google Gemini 2.5 Flash Image |
+| AI — images | Gemini 2.5 Flash Image (direct), any OpenRouter image model, or Higgsfield |
+| AI — video | OpenRouter video API or Higgsfield |
 | Database | PostgreSQL 16 via Prisma 6 |
 | Image storage | Local filesystem (`public/uploads`) |
 | Tests | Vitest |
@@ -36,7 +39,7 @@ A local-first Next.js app for hobbyist artists and comic/manga creators. Describ
 - Node.js 20.9+
 - Docker (for the local Postgres instance)
 - An Anthropic API key
-- A Google Gemini API key
+- At least one image provider key: Google Gemini, OpenRouter or Higgsfield (OpenRouter or Higgsfield also enable video)
 
 ### Setup
 
@@ -64,8 +67,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
-| `GEMINI_API_KEY` | Google API key for Gemini |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude (required) |
+| `GEMINI_API_KEY` | Gemini images, called directly |
+| `OPENROUTER_API_KEY` | OpenRouter images and video |
+| `HIGGSFIELD_API_KEY` | Higgsfield images and video (`id:secret`) |
+| `IMAGE_PROVIDER` / `IMAGE_MODEL` | Optional default image engine |
+| `VIDEO_PROVIDER` / `VIDEO_MODEL` | Optional default video engine |
 | `DATABASE_URL` | Postgres connection string |
 
 The Docker Compose database uses:
@@ -83,16 +90,21 @@ app/                        # Next.js App Router
   api/generate/             # profile, image, guide and random-concept routes
   api/characters/           # character CRUD, guide and sketch routes
   api/sketches/             # delete a sketch
+  api/videos/               # poll / delete a video job
+  api/media/options/        # providers and models for the pickers
 components/
   creator/                  # step-by-step wizard components
   gallery/                  # gallery grid with tag filters
   exercise/                 # fullscreen timed exercise
   guide/                    # drawing guide drawer and state
   sketchbook/               # sketch upload and grid
+  videos/                   # video studio (price, generate, follow jobs)
+  engine-picker.tsx         # provider + model selects
   ui/                       # shadcn/ui primitives
 lib/
   anthropic.ts              # Claude integration
-  gemini.ts                 # Gemini integration
+  artwork.ts                # portrait and guide-diagram prompts
+  media/                    # Gemini, OpenRouter and Higgsfield clients, provider registry
   db.ts                     # Prisma client
   storage.ts                # image persistence and sketch resizing
 tests/                      # Vitest suites for API routes and lib modules
