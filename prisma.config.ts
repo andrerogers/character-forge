@@ -6,7 +6,12 @@ import { config } from "dotenv";
 // Next.js reads .env.local; load it here too so Prisma CLI commands work
 // with the same single env file. .env is still honoured as a fallback.
 config({ path: [".env.local", ".env"], quiet: true });
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+
+// Falls back to the docker-compose database so `prisma generate` (run on
+// npm install) works before .env.local exists.
+const DEFAULT_DATABASE_URL =
+  "postgresql://character_forge:character_forge@localhost:5432/character_forge";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -15,6 +20,6 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DATABASE_URL || DEFAULT_DATABASE_URL,
   },
 });

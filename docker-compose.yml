@@ -7,9 +7,16 @@ services:
       POSTGRES_PASSWORD: character_forge
       POSTGRES_DB: character_forge
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Lets `docker compose up --wait` (npm run db:up) return only once
+    # Postgres accepts connections, so migrations don't race the startup.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U character_forge -d character_forge"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
 volumes:
   postgres_data:
